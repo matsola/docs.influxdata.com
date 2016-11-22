@@ -7,86 +7,182 @@ menu:
     parent: query_language
 ---
 
-Use InfluxQL functions to aggregate, select, transform, and predict data.
+Aggregate, select, transform, and predict data with InfluxQL functions.
 
-| Aggregations | Selectors | Transformations | Predictors |
-|--------------|-----------|-----------------|------------|
-| [COUNT()](#count)        | [BOTTOM()](#bottom)         | [CEILING()](#ceiling)                                 | [HOLT_WINTERS()](#holt-winters)  
-| [DISTINCT()](#distinct)  | [FIRST()](#first)           | [CUMULATIVE_SUM()](#cumulative-sum)                     |
-| [INTEGRAL()](#integral)  | [LAST()](#last)             | [DERIVATIVE()](#derivative)                           |
-| [MEAN()](#mean)          | [MAX()](#max)               | [DIFFERENCE()](#difference)                           |
-| [MEDIAN()](#median)      | [MIN()](#min)               | [ELAPSED()](#elapsed)                                 |
-| [MODE()](#mode)          | [PERCENTILE()](#percentile) | [FLOOR()](#floor)                                     |
-| [SPREAD()](#spread)      | [SAMPLE()](#sample)         | [HISTOGRAM()](#histogram)                             |
-| [STDDEV()](#stddev)      | [TOP()](#top)               | [MOVING_AVERAGE()](#moving-average)                   |
-| [SUM()](#sum)            |                             | [NON_NEGATIVE_DERIVATIVE()](#non-negative-derivative) |
+<table style="width:100%">
+  <tr>
+    <td><b>Aggregations:</b></td>
+    <td><b>Selectors:</b></td>
+    <td><b>Transformations:</b></td>
+    <td><b>Predictors:</b></td>
+    <td><b>General Functions Syntax:</b></td>
+  </tr>
+  <tr>
+    <td><a href="#count">COUNT()</a></td>
+    <td><a href="#bottom">BOTTOM()</a></td>
+    <td><a href="#ceiling">CEILING()</a></td>
+    <td><a href="#holt-winters">HOLT_WINTERS()</a></td>
+    <td><a href="#multiple-functions-in-a-query">Multiple Functions in a Query</a></td>
+  </tr>
+  <tr>
+    <td><a href="#distinct">DISTINCT()</a></td>
+    <td><a href="#first">FIRST()</a></td>
+    <td><a href="#cumulative-sum">CUMULATIVE_SUM()</a></td>
+    <td><a href="#"></a></td>
+    <td><a href="#"></a></td>
+  </tr>
+  <tr>
+    <td><a href="#integral">INTEGRAL()</a></td>
+    <td><a href="#last">LAST()</a></td>
+    <td><a href="#derivative">DERIVATIVE()</a></td>
+    <td><a href="#"></a></td>
+    <td><a href="#"></a></td>
+  </tr>
+  <tr>
+    <td><a href="#mean">MEAN()</a></td>
+    <td><a href="#max">MAX()</a></td>
+    <td><a href="#difference">DIFFERENCE()</a></td>
+    <td><a href="#"></a></td>
+    <td><a href="#"></a></td>
+  </tr>
+  <tr>
+    <td><a href="#median">MEDIAN()</a></td>
+    <td><a href="#min">MIN()</a></td>
+    <td><a href="#elapsed">ELAPSED()</a></td>
+    <td><a href="#"></a></td>
+    <td><a href="#"></a></td>
+  </tr>
+  <tr>
+    <td><a href="#mode">MODE()</a></td>
+    <td><a href="#percentile">PERCENTILE()</a></td>
+    <td><a href="#floor">FLOOR()</a></td>
+    <td><a href="#"></a></td>
+    <td><a href="#"></a></td>
+  </tr>
+  <tr>
+    <td><a href="#spread">SPREAD()</a></td>
+    <td><a href="#sample">SAMPLE()</a></td>
+    <td><a href="#histogram">HISTOGRAM()</a></td>
+    <td><a href="#"></a></td>
+    <td><a href="#"></a></td>
+  </tr>
+  <tr>
+    <td><a href="#stddev">STDDEV()</a></td>
+    <td><a href="#top">TOP()</a></td>
+    <td><a href="#moving-average">MOVING_AVERAGE()</a></td>
+    <td><a href="#"></a></td>
+    <td><a href="#"></a></td>
+  </tr>
+  <tr>
+    <td><a href="#sum">SUM()</a></td>
+    <td><a href="#""></a></td>
+    <td><a href="#non-negative-derivative">NON_NEGATIVE_DERIVATIVE()</a></td>
+    <td><a href="#"></a></td>
+    <td><a href="#"></a></td>
+  </tr>
+</table>
 
+### Sample Data
+The data used in this document are available for download on the [Sample Data](/influxdb/v1.1/query_language/data_download/) page.
 
-Useful InfluxQL for functions:  
+<br>
+# Aggregation Functions
 
-* [Include multiple functions in a single query](/influxdb/v1.1/query_language/functions/#include-multiple-functions-in-a-single-query)
-* [Change the value reported for intervals with no data with `fill()` ](/influxdb/v1.1/query_language/functions/#change-the-value-reported-for-intervals-with-no-data-with-fill)
-* [Rename the output column's title with `AS`](/influxdb/v1.1/query_language/functions/#rename-the-output-column-s-title-with-as)
+Definition
 
-The examples below query data using [InfluxDB's Command Line Interface (CLI)](/influxdb/v1.1/tools/shell/).
-See the [Querying Data](/influxdb/v1.1/guides/querying_data/) guide for how to query data directly using the HTTP API.
+### Common Issues with Aggregation Functions
 
-**Sample data**
+#### Issue 1: Understanding the returned timestamp
 
-The examples in this document use the same sample data as the [Data Exploration](/influxdb/v1.1/query_language/data_exploration/) page.
-The data are described and are available for download on the [Sample Data](/influxdb/v1.1/query_language/data_download/) page.
+Aggregation functions return epoch 0 (`1970-01-01T00:00:00Z`) as the timestamp unless you specify a lower bound on the time range.
+Then they return the lower bound as the timestamp.
 
-# Aggregations
+#### Issue 2: Mixing aggregation functions with non-aggregates
 
 ## COUNT()
-Returns the number of non-null values in a single [field](/influxdb/v1.1/concepts/glossary/#field).
-`COUNT()` accepts all field types; an `*` indicates all fields in the measurement.
+Returns the number of non-null values.
+
+### Syntax
+
 ```
-SELECT COUNT(<field_key>) FROM <measurement_name> [WHERE <stuff>] [GROUP BY <stuff>]
+SELECT COUNT( [ * | <field_key> | /<regular_expression>/ ] ) FROM_clause [WHERE_clause] [GROUP_BY_clause] [ORDER_BY_clause] [LIMIT_clause] [OFFSET_clause] [SLIMIT_clause] [SOFFSET_clause]
 ```
 
-Examples:
+### Description of Syntax
 
-* Count the number of non-null field values in the `water_level` field:
+`*`
+&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&nbsp;&nbsp;
+all [field keys](/influxdb/v1.1/concepts/glossary/#field-key)  
+`field_key`
+&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&nbsp;&nbsp;&nbsp;&thinsp;
+a field key that stores any [data type](/influxdb/v1.1/write_protocols/line_protocol_reference/#data-types)  
+`/regular_expression/`
+&emsp;&emsp;&emsp;
+a [regular expression](/influxdb/v1.1/query_language/data_exploration/#regular-expressions-in-queries) that matches a field key(s)
 
+### Examples
+
+#### Example 1: Count the number of non-null field values of a single field key
 ```
 > SELECT COUNT("water_level") FROM "h2o_feet"
+
 name: h2o_feet
---------------
-time			               count
-1970-01-01T00:00:00Z	 15258
+time                   count
+----                   -----
+1970-01-01T00:00:00Z   15258
 ```
+The query returns the number of non-null values in the `water_level`
+[field key](/influxdb/v1.1/concepts/glossary/#field-key) in the `h2o_feet`
+[measurement](/influxdb/v1.1/concepts/glossary/#measurement).
 
-> **Note:** Aggregation functions return epoch 0 (`1970-01-01T00:00:00Z`) as the timestamp unless you specify a lower bound on the time range. Then they return the lower bound as the timestamp.
-
-* Count the number of non-null field values in the `water_level` field at four-day intervals:
-
-```
-> SELECT COUNT("water_level") FROM "h2o_feet" WHERE time >= '2015-08-18T00:00:00Z' AND time < '2015-09-18T17:00:00Z' GROUP BY time(4d)
-name: h2o_feet
---------------
-time			               count
-2015-08-17T00:00:00Z	 1440
-2015-08-21T00:00:00Z	 1920
-2015-08-25T00:00:00Z	 1920
-2015-08-29T00:00:00Z	 1920
-2015-09-02T00:00:00Z	 1915
-2015-09-06T00:00:00Z	 1920
-2015-09-10T00:00:00Z	 1920
-2015-09-14T00:00:00Z	 1920
-2015-09-18T00:00:00Z	 335
-```
-
-* Count the number of non-null field values for all fields (`level description` and `water_level`) in the measurement `h2o_feet`:
-
+#### Example 2: Count the number of non-null field values for all field keys in a measurement
 ```
 > SELECT COUNT(*) FROM "h2o_feet"
-name: h2o_feet
---------------
-time                   count_level description	    count_water_level
-1970-01-01T00:00:00Z   15258                       15258
-```
 
+name: h2o_feet
+time                   count_level description   count_water_level
+----                   -----------------------   -----------------
+1970-01-01T00:00:00Z   15258                     15258
+```
+The query returns the number of non-null values for every field key associated
+with the `h2o_feet` measurement.
+
+#### Example 3: Count the number of non-null field values for field keys that match a regular expression
+```
+> SELECT COUNT(/water/) FROM "h2o_feet"
+
+name: h2o_feet
+time                   count_water_level
+----                   -----------------
+1970-01-01T00:00:00Z   15258
+```
+The query returns the number of non-null values for every field key that
+contains the word `water` in the `h2o_feet` measurement .
+
+#### Example 4: Count the number of non-null field values for a single field key and include several clauses
+```
+> SELECT COUNT("water_level") FROM "h2o_feet" WHERE time >= '2015-08-17T23:48:00Z' AND time < '2015-08-18T00:54:00Z' GROUP BY time(12m),* fill(200) LIMIT 7 SLIMIT 1
+
+name: h2o_feet
+tags: location=coyote_creek
+time                   count
+----                   -----
+2015-08-17T23:48:00Z   200
+2015-08-18T00:00:00Z   2
+2015-08-18T00:12:00Z   2
+2015-08-18T00:24:00Z   2
+2015-08-18T00:36:00Z   2
+2015-08-18T00:48:00Z   1
+```
+The query returns the number of non-null values in the `water_level` field key.
+It covers the time range between `2015-08-17T23:48:00Z` and `2015-08-18T00:54:00Z`
+and groups results into 12-minute time intervals and per tag.
+The query fills empty time intervals with `200` and limits the number of points
+and series returned to seven and one.
+
+### Common Issues with COUNT()
+
+#### Issue 1: COUNT() and fill()
 > #### `COUNT()` and controlling the values reported for intervals with no data
 > <br>
 > Other InfluxQL functions report `null` values for intervals with no data, and appending `fill(<stuff>)` to queries with those functions replaces `null` values in the output with `<stuff>`.
@@ -115,6 +211,8 @@ time			               count
 ```
 
 > For a more general discussion of `fill()`, see [Data Exploration](/influxdb/v1.1/query_language/data_exploration/#group-by-time-intervals-and-fill).
+
+
 
 ## DISTINCT()
 Returns the unique values of a single [field](/influxdb/v1.1/concepts/glossary/#field).
